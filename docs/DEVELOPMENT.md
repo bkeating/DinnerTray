@@ -11,6 +11,7 @@
 - `DesktopPhysics.cs`, `ThrowGesture.cs`: gravity, platforms, and recent pointer velocity.
 - `SlingGame.cs`, `SmashPhysics.cs`: game overlay, slingshot input, blocks, impulses, and debris.
 - `AppArtwork.cs`, `AboutForm.cs`: app identity and About dialog.
+- `assets/dinnertray.png`: official logo, embedded for the idle tray icon and About dialog and displayed in the README. `assets/dinnertray.ico` contains Windows icon sizes from 16 to 256 pixels for the executable.
 - `tests/`: dependency-free C# checks and Node's built-in JavaScript test runner.
 
 ## Commands

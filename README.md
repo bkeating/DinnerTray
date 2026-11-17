@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/assets/dinnertray.svg" width="96" alt="DinnerTray plate and play icon"></p>
+<p align="center"><img src="assets/dinnertray.png" width="192" alt="DinnerTray logo: Woolly perched on a coral dinner tray with a play-button plate, cutlery, and peas"></p>
 
 # DinnerTray
 

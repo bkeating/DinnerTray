@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Adopted the official Woolly dinner-tray logo across the executable, idle tray icon, About dialog, and README.
+
 ## 1.2.0 — 2026-11-17
 
 - Added a desktop slingshot, a breakable wooden block pile, trajectory preview, reset, and close controls.

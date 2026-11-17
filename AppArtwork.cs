@@ -18,18 +18,15 @@ internal static class AppArtwork
     {
         var bitmap = new Bitmap(size, size);
         using var g = Graphics.FromImage(bitmap);
-        g.SmoothingMode = SmoothingMode.AntiAlias;
-        g.ScaleTransform(size / 128f, size / 128f);
-        using var shape = new GraphicsPath();
-        shape.AddRoundedRectangle(new RectangleF(4, 4, 120, 120), new SizeF(28, 28));
-        using var gradient = new LinearGradientBrush(new Rectangle(0, 0, 128, 128), Color.FromArgb(255, 146, 103), Color.FromArgb(213, 61, 68), 65f);
-        g.FillPath(gradient, shape);
-        using var plate = new SolidBrush(Color.FromArgb(255, 248, 236));
-        g.FillEllipse(plate, 21, 21, 86, 86);
-        using var rim = new Pen(Color.FromArgb(235, 213, 198), 3);
-        g.DrawEllipse(rim, 29, 29, 70, 70);
-        using var play = new SolidBrush(Color.FromArgb(213, 68, 66));
-        g.FillPolygon(play, [new PointF(55, 44), new PointF(55, 84), new PointF(85, 64)]);
+        using var stream = typeof(AppArtwork).Assembly.GetManifestResourceStream("DinnerTray.Logo.png")
+            ?? throw new InvalidOperationException("The DinnerTray logo resource is missing.");
+        using var logo = Image.FromStream(stream);
+        g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+        var scale = Math.Min((float)size / logo.Width, (float)size / logo.Height);
+        var width = logo.Width * scale;
+        var height = logo.Height * scale;
+        g.DrawImage(logo, (size - width) / 2, (size - height) / 2, width, height);
         return bitmap;
     }
 }

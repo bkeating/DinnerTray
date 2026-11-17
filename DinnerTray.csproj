@@ -8,8 +8,10 @@
     <Version>1.2.0</Version>
     <Company>The American Spreadsheet Company</Company>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>assets/dinnertray.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="assets/dinnertray.png" LogicalName="DinnerTray.Logo.png" />
     <EmbeddedResource Include="PlaybackHealth.js" />
     <EmbeddedResource Include="VideoFrame.js" />
     <Compile Remove="tests/**/*.cs" />
