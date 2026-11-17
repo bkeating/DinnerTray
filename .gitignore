@@ -6,6 +6,12 @@ Share/
 test-results/
 *.user
 artifacts/
+/output/
+__pycache__/
+*.pyc
+.venv/
+diagnostics.json
+last-frame.png
 .vs/
 .idea/
 *.suo

@@ -37,6 +37,14 @@ jobs:
         run: ./test.ps1
       - name: Package standalone executable
         run: ./package.ps1
+      - name: Check repository cleanliness
+        run: |
+          $trackedOutputs = git ls-files --cached --ignored --exclude-from=.gitignore
+          if ($LASTEXITCODE -ne 0) { throw 'Could not inspect tracked files.' }
+          if ($trackedOutputs) { throw "Tracked files match .gitignore: $trackedOutputs" }
+          $changes = git status --porcelain --untracked-files=all
+          if ($LASTEXITCODE -ne 0) { throw 'Could not inspect the working tree.' }
+          if ($changes) { throw "Testing or packaging left changes: $changes" }
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: DinnerTray-windows-x64
