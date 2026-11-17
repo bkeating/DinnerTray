@@ -71,6 +71,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
+          # A release may already have been published with verified local artifacts.
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            exit 0
+          fi
           gh release create "$GITHUB_REF_NAME" release/*.zip release/*.sha256 \
             --verify-tag --draft --title "DinnerTray $GITHUB_REF_NAME" \
             --notes "Experimental Windows 11 x64 build. Extract DinnerTray.exe and run it; .NET is included. Chrome or Edge is required for video. Builds are unsigned. Review CHANGELOG.md and complete manual desktop smoke tests before publishing this draft."
