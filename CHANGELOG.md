@@ -1,11 +1,8 @@
 # Changelog
 
-## Unreleased
-
-- Adopted the official Woolly dinner-tray logo across the executable, idle tray icon, About dialog, and README.
-
 ## 1.2.0 — 2026-11-17
 
+- Adopted the official Woolly dinner-tray logo across the executable, idle tray icon, About dialog, and README.
 - Added a desktop slingshot, a breakable wooden block pile, trajectory preview, reset, and close controls.
 - Sheep can be flung with mouse momentum and follow gravity-driven arcs.
 - Added projectile, collision, stack-stability, and monitor-width simulation checks.
