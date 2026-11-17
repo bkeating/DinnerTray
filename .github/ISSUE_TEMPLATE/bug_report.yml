@@ -1,0 +1,30 @@
+name: Bug report
+description: Report a video, sheep, slingshot, or desktop compatibility problem.
+title: "[Bug] "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the expected behavior and what you saw instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: For video issues, say whether the browser player also stopped or only the tray image did.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: DinnerTray version, Windows version, browser/version, monitor layout, and display scaling.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Screenshots or relevant logs
+      description: Optional. Remove private content. Do not upload browser profiles, cookies, tokens, or private diagnostic frames.

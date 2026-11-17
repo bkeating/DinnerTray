@@ -1,0 +1,19 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>DinnerTray playback test</title>
+<style>body{margin:40px;background:#181818;color:#eee;font:18px system-ui}video{width:640px;display:block;margin:24px 0}canvas{display:none}</style>
+<h1>DinnerTray playback test</h1>
+<p>A deterministic video source for testing moving frames, pause, and minimized playback.</p>
+<video autoplay muted playsinline controls></video><canvas width="640" height="360"></canvas>
+<script>
+const c = document.querySelector('canvas'), ctx = c.getContext('2d');
+let frame = 0;
+setInterval(() => {
+  ctx.fillStyle = `hsl(${frame++ * 3 % 360} 80% 45%)`;
+  ctx.fillRect(0, 0, 640, 360);
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(320 + Math.sin(frame / 8) * 210, 180, 65, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#111'; ctx.font = 'bold 40px system-ui'; ctx.fillText(String(frame), 20, 55);
+}, 83);
+document.querySelector('video').srcObject = c.captureStream(12);
+</script>

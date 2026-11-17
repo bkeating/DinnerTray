@@ -1,0 +1,15 @@
+name: Feature idea
+description: Suggest a focused improvement or a new desktop creature.
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like to do?
+      description: Describe the interaction and why it would be useful or fun.
+    validations:
+      required: true
+  - type: textarea
+    id: simplicity
+    attributes:
+      label: How could it stay simple?
+      description: DinnerTray aims for a single executable and a short tray menu.

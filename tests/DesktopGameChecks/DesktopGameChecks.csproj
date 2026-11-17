@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../DesktopPhysics.cs" />
+    <Compile Include="../../DesktopSheep.cs" />
+    <Compile Include="../../DesktopSurfaces.cs" />
+    <Compile Include="../../ThrowGesture.cs" />
+    <Compile Include="../../SmashPhysics.cs" />
+    <Compile Include="../../SlingGame.cs" />
+  </ItemGroup>
+</Project>
