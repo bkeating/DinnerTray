@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.1 — 2026-11-17
+
+- Keep active tray capture running while other browser tabs are being discovered.
+- Space automatic YouTube refresh attempts at least a minute apart, bypass cached page resources on recovery, and wait for playable data before restoring position.
+- Surface YouTube player error codes in the tray status and recovery log. These changes reduce recovery disruption; they do not guarantee resolution of YouTube-side playback rejections.
+
 ## 1.2.0 — 2026-11-17
 
 - Adopted the official Woolly dinner-tray logo across the executable, idle tray icon, About dialog, and README.

@@ -15,6 +15,7 @@
     ready: v?.readyState ?? 0,
     live: v?.duration === Infinity || !!player?.classList.contains('ytp-live'),
     ad: !!player?.classList.contains('ad-showing'), online: navigator.onLine,
-    mediaError: v?.error?.code || 0, retryError: !!retryError
+    mediaError: v?.error?.code || 0, retryError: !!retryError,
+    playerError: visible ? String(player?.getVideoData?.()?.errorCode || '').slice(0, 100) : ''
   };
 })()

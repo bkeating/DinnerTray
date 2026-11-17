@@ -1,7 +1,8 @@
 namespace DinnerTray;
 
 internal sealed record PlaybackHealth(string VideoId, bool HasVideo, bool Paused, bool Ended,
-    double Time, double Duration, int Ready, bool Live, bool Ad, bool Online, int MediaError, bool RetryError);
+    double Time, double Duration, int Ready, bool Live, bool Ad, bool Online, int MediaError, bool RetryError,
+    string PlayerError = "");
 internal sealed record ResumePoint(string VideoId, double Time, bool Paused, bool Live);
 
 // Only explicit errors following observed playback qualify. No stall/paused-time heuristics.
@@ -13,6 +14,7 @@ internal sealed class PlaybackRecovery
     private readonly Queue<DateTimeOffset> attempts = new();
     public ResumePoint? Pending { get; private set; }
     private DateTimeOffset pendingUntil;
+    private DateTimeOffset nextAttempt;
 
     public ResumePoint? Observe(PlaybackHealth h, DateTimeOffset now)
     {
@@ -34,8 +36,10 @@ internal sealed class PlaybackRecovery
         if (Pending != null) { errorSince = null; return null; }
         errorSince ??= now;
         while (attempts.TryPeek(out var time) && now - time >= TimeSpan.FromMinutes(10)) attempts.Dequeue();
-        if (now - errorSince.Value < TimeSpan.FromSeconds(5) || attempts.Count >= 2) return null;
+        if (now - errorSince.Value < TimeSpan.FromSeconds(5) || now < nextAttempt || attempts.Count >= 2) return null;
         attempts.Enqueue(now);
+        // Brief playback after a reload must not trigger another immediate refresh loop.
+        nextAttempt = now.AddMinutes(1);
         Pending = lastGood;
         pendingUntil = now.AddSeconds(45);
         errorSince = null;
@@ -43,7 +47,7 @@ internal sealed class PlaybackRecovery
     }
 
     public bool CanRestore(PlaybackHealth h) => Pending != null && Pending.VideoId == h.VideoId &&
-        h.HasVideo && h.Ready >= 1 && !h.Ad && !h.RetryError && h.MediaError == 0;
+        h.HasVideo && h.Ready >= 3 && !h.Ad && !h.RetryError && h.MediaError == 0;
     public void Restored() => Pending = null;
     public void CancelResume() { Pending = null; lastGood = null; errorSince = null; }
 }

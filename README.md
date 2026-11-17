@@ -28,7 +28,7 @@ Built by **The American Spreadsheet Company**.
 - **Left-click** restores the video tab. **Right-click** offers play/pause and the rest of the app.
 - Audio continues through the browser. Minimizing its window lets you watch in the tray.
 - A focused playing tab takes priority; otherwise DinnerTray favors the current playing tab. Larger playing video elements take priority over small previews on the same page.
-- On YouTube, persistent transient player errors can trigger a limited refresh and position restore. Ordinary pauses and buffering do not.
+- On YouTube, persistent transient player errors can trigger at most two automatic refreshes per ten minutes, at least a minute apart. Recovery bypasses cached page resources and waits for playable data before restoring position. Ordinary pauses and buffering do not trigger refreshes. Recurring YouTube-side playback rejections may still need attention in the browser; the tray status shows the player error when available.
 
 ### Which videos work?
 
@@ -87,7 +87,7 @@ DinnerTray launches installed Chrome (or Edge as a fallback) with a separate sav
 
 - Browser logins, history, and cookies stay in `%LOCALAPPDATA%\DinnerTray\Browser`.
 - The app has no telemetry or backend. Sites you visit retain their usual network and account behavior.
-- A bounded local `recovery.log` records recovery times and numeric media-error codes without video titles or URLs.
+- A bounded local `recovery.log` records recovery times, numeric media-error codes, and YouTube player error codes without video titles or URLs.
 - Opt-in `--diagnostics` saves playback counters and the latest tiny video frame locally. Those files are not included in release packages.
 - The dedicated profile is browser-controllable by software on your machine; use it for playback rather than unrelated sensitive browsing. Quit leaves the browser open; closing its windows ends that browser session.
 

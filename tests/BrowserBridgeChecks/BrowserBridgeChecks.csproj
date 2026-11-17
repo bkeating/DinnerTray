@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../BrowserBridge.cs" />
+    <Compile Include="../../CdpClient.cs" />
+    <Compile Include="../../PlaybackRecovery.cs" />
+    <EmbeddedResource Include="../../PlaybackHealth.js" LogicalName="DinnerTray.PlaybackHealth.js" />
+    <EmbeddedResource Include="../../VideoFrame.js" LogicalName="DinnerTray.VideoFrame.js" />
+  </ItemGroup>
+</Project>

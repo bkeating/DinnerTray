@@ -12,15 +12,18 @@ var resume = state.Observe(error, now.AddSeconds(7));
 Check(resume?.Time == 123 && resume.Paused == false, "Preserve last good position and intent, not failed player state");
 Check(!state.CanRestore(error), "Do not restore while error still displayed");
 Check(state.CanRestore(healthy), "Restore after player recovers");
+Check(!state.CanRestore(healthy with { Ready = 1 }), "Metadata alone is not enough to seek and resume");
+Check(!state.CanRestore(healthy with { Ready = 2 }), "Wait for playable future data before restoring");
 Check(!state.CanRestore(healthy with { Ad = true }), "Do not seek or skip an ad");
 Check(!state.CanRestore(healthy with { VideoId = "b" }), "Never seek a different video");
 Check(state.Observe(error, now.AddSeconds(15)) == null, "Do not refresh during pending restore");
 state.Restored();
 state.Observe(error, now.AddSeconds(20));
-Check(state.Observe(error, now.AddSeconds(26)) != null, "Permit one retry");
+Check(state.Observe(error, now.AddSeconds(26)) == null, "Do not refresh again immediately after a relapse");
+Check(state.Observe(error, now.AddSeconds(68)) != null, "Permit one retry after the cooldown");
 state.Restored();
-state.Observe(error, now.AddSeconds(30));
-Check(state.Observe(error, now.AddSeconds(40)) == null, "Cap retries to prevent loops");
+state.Observe(error, now.AddSeconds(80));
+Check(state.Observe(error, now.AddSeconds(150)) == null, "Cap retries to prevent loops");
 Check(state.Observe(error, now.AddMinutes(11)) != null, "Retry budget eventually recovers");
 
 foreach (var normal in new[] { healthy with { Paused = true }, healthy with { Ready = 1 }, healthy with { Ended = true }, healthy with { Ad = true }, healthy with { MediaError = 1 }, healthy with { MediaError = 4 } })

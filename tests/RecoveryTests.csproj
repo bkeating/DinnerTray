@@ -5,6 +5,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="DesktopGameChecks/**/*.cs" />
+    <Compile Remove="BrowserBridgeChecks/**/*.cs" />
     <Compile Include="../PlaybackRecovery.cs" Link="PlaybackRecovery.cs" />
     <Compile Include="../DesktopPhysics.cs" Link="DesktopPhysics.cs" />
     <Compile Include="../ThrowGesture.cs" Link="ThrowGesture.cs" />

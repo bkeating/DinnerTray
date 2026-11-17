@@ -3,11 +3,11 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 const script = readFileSync(new URL('../PlaybackHealth.js', import.meta.url), 'utf8');
-function inspect({message='', visible=true, video=true, code=0, ad=false}={}) {
+function inspect({message='', visible=true, video=true, code=0, ad=false, playerError=''}={}) {
   return vm.runInNewContext(script, {
     URL, location:{href:'https://www.youtube.com/watch?v=sample'}, navigator:{onLine:true},
     getComputedStyle:()=>({display:visible?'block':'none',visibility:'visible'}),
-    document:{querySelector:s=>s==='video'?(video?{paused:false,ended:false,currentTime:123,duration:600,readyState:4,error:code?{code}:null}:null):s==='#movie_player'?{classList:{contains:c=>ad&&c==='ad-showing'}}:{innerText:message,getClientRects:()=>visible?[{}]:[]}}
+    document:{querySelector:s=>s==='video'?(video?{paused:false,ended:false,currentTime:123,duration:600,readyState:4,error:code?{code}:null}:null):s==='#movie_player'?{getVideoData:()=>({errorCode:playerError}),classList:{contains:c=>ad&&c==='ad-showing'}}:{innerText:message,getClientRects:()=>visible?[{}]:[]}}
   });
 }
 test('detect exact reported message even if video disappeared',()=>assert.equal(inspect({message:'Something went wrong',video:false}).retryError,true));
@@ -16,3 +16,8 @@ test('ignore hidden error leftovers',()=>assert.equal(inspect({message:'Somethin
 test('ignore sign-in and unavailable video notices',()=>{for(const message of ['Sign in to confirm your age','This video is unavailable','Video paused. Continue watching?']) assert.equal(inspect({message}).retryError,false);});
 test('capture media error, identity, and position',()=>{const s=inspect({code:2});assert.equal(s.mediaError,2);assert.equal(s.videoId,'sample');assert.equal(s.time,123);});
 test('recognize ads for recovery exclusion',()=>assert.equal(inspect({ad:true}).ad,true));
+test('capture YouTube player rejection separately from decoder errors',()=>{
+  const s=inspect({message:'Something went wrong',playerError:'ump.spsrejectfailure'});
+  assert.equal(s.playerError,'ump.spsrejectfailure'); assert.equal(s.mediaError,0);
+});
+test('ignore stale player error when the error UI is hidden',()=>assert.equal(inspect({visible:false,playerError:'ump.spsrejectfailure'}).playerError,''));

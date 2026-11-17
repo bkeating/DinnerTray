@@ -14,7 +14,9 @@ internal sealed class BrowserBridge : IDisposable
     private string? targetId;
     private int port;
     private DateTime nextDiscovery;
+    private Task<(string Id, string Socket)?>? discovery;
     private DateTime nextHealthCheck;
+    private string? playbackError;
     private readonly Dictionary<string, PlaybackRecovery> recovery = new();
     private static readonly JsonSerializerOptions HealthJson = new() { PropertyNameCaseInsensitive = true };
     private static readonly string HealthScript = ReadScript("PlaybackHealth.js");
@@ -78,10 +80,9 @@ internal sealed class BrowserBridge : IDisposable
         return uri.Scheme is "https" or "http";
     }
 
-    private async Task DiscoverAsync()
+    private async Task<(string Id, string Socket)?> DiscoverAsync()
     {
-        nextDiscovery = DateTime.UtcNow.AddSeconds(2);
-        if (!await TryDiscoverPortAsync()) { Disconnect(); return; }
+        if (!await TryDiscoverPortAsync()) return null;
         using var json = JsonDocument.Parse(await http.GetStringAsync($"http://127.0.0.1:{port}/json/list"));
         var candidates = json.RootElement.EnumerateArray().Where(t => t.GetProperty("type").GetString() == "page" && IsVideoPage(t.GetProperty("url").GetString() ?? "")).ToList();
         string? winnerId = null;
@@ -94,8 +95,9 @@ internal sealed class BrowserBridge : IDisposable
             CdpClient? probe = null;
             try
             {
-                probe = id == targetId && page != null ? page : new CdpClient();
-                if (probe != page) await probe.ConnectAsync(ws);
+                // Discovery must never queue work on the active capture connection.
+                probe = new CdpClient();
+                await probe.ConnectAsync(ws);
                 var state = await probe.EvaluateAsync("(() => { const vs = [...document.querySelectorAll('video')].filter(v => v.readyState >= 2 && v.videoWidth > 0); return {video: vs.length > 0, playing: vs.some(v => !v.paused && !v.ended), focused: document.hasFocus()}; })()");
                 // Keep the followed tab through buffering, errors, and a reload.
                 if (!state.GetProperty("video").GetBoolean() && id != targetId) continue;
@@ -103,35 +105,50 @@ internal sealed class BrowserBridge : IDisposable
                 if (score > best) { best = score; winnerId = id; winnerSocket = ws; }
             }
             catch { /* A closing/navigating tab is normal. Try the others. */ }
-            finally { if (probe != page) probe?.Dispose(); }
+            finally { probe?.Dispose(); }
         }
-        if (winnerId == null) { Disconnect(); return; }
-        foreach (var key in recovery.Keys.Where(k => !candidates.Any(t => t.GetProperty("id").GetString() == k)).ToArray()) recovery.Remove(key);
-        if (targetId == winnerId && page != null) return;
+        return winnerId == null ? null : (winnerId, winnerSocket!);
+    }
+
+    private async Task UpdateTargetAsync()
+    {
+        if (discovery == null && DateTime.UtcNow >= nextDiscovery) discovery = DiscoverAsync();
+        // A slow or suspended unrelated tab must not freeze an already-playing tray video.
+        if (discovery == null || (page != null && !discovery.IsCompleted)) return;
+        (string Id, string Socket)? winner;
+        try { winner = await discovery; }
+        catch when (page != null) { return; }
+        finally { discovery = null; nextDiscovery = DateTime.UtcNow.AddSeconds(2); }
+        if (winner == null || (targetId == winner.Value.Id && page != null)) return;
         Disconnect();
         var connection = new CdpClient();
-        try { await connection.ConnectAsync(winnerSocket!); }
+        try { await connection.ConnectAsync(winner.Value.Socket); }
         catch { connection.Dispose(); throw; }
         page = connection;
-        targetId = winnerId;
+        targetId = winner.Value.Id;
+        nextHealthCheck = DateTime.MinValue;
     }
 
     public async Task<VideoState?> CaptureAsync()
     {
         try
         {
-            if (DateTime.UtcNow >= nextDiscovery) await DiscoverAsync();
+            await UpdateTargetAsync();
             if (page == null) { HasVideo = false; return null; }
             if (DateTime.UtcNow >= nextHealthCheck)
             {
                 nextHealthCheck = DateTime.UtcNow.AddSeconds(1);
-                if (await CheckRecoveryAsync()) return null;
+                if (await CheckRecoveryAsync()) return new("Video", true, 0, null, "Recovering YouTube playback…");
             }
             var value = await page.EvaluateAsync(FrameScript);
-            if (value.ValueKind == JsonValueKind.Null) { HasVideo = false; return null; }
+            if (value.ValueKind == JsonValueKind.Null)
+            {
+                HasVideo = false;
+                return playbackError == null ? null : new("Video", true, 0, null, playbackError);
+            }
             HasVideo = true;
             LastError = null;
-            return new(value.GetProperty("title").GetString() ?? "Video", value.GetProperty("paused").GetBoolean(), value.GetProperty("time").GetDouble(), value.TryGetProperty("png", out var png) ? png.GetString() : null, value.TryGetProperty("error", out var error) ? error.GetString() : null);
+            return new(value.GetProperty("title").GetString() ?? "Video", value.GetProperty("paused").GetBoolean(), value.GetProperty("time").GetDouble(), value.TryGetProperty("png", out var png) ? png.GetString() : null, playbackError ?? (value.TryGetProperty("error", out var error) ? error.GetString() : null));
         }
         catch (Exception ex) { LastError = ex.Message; Disconnect(forgetTarget: false); return null; }
     }
@@ -147,14 +164,17 @@ internal sealed class BrowserBridge : IDisposable
         if (page == null || targetId == null) return false;
         // Recovery knows YouTube's player UI and URL identity only. Never refresh other sites.
         var isYouTube = await page.EvaluateAsync("location.hostname === 'youtube.com' || location.hostname.endsWith('.youtube.com')");
-        if (!isYouTube.GetBoolean()) { recovery.Remove(targetId); return false; }
+        if (!isYouTube.GetBoolean()) { playbackError = null; recovery.Remove(targetId); return false; }
         var health = (await page.EvaluateAsync(HealthScript)).Deserialize<PlaybackHealth>(HealthJson)!;
+        playbackError = health.RetryError
+            ? (string.IsNullOrEmpty(health.PlayerError) ? "YouTube playback error — click to open browser" : $"YouTube error: {health.PlayerError}")
+            : null;
         if (!recovery.TryGetValue(targetId, out var state)) recovery[targetId] = state = new();
         var resume = state.Observe(health, DateTimeOffset.UtcNow);
         if (resume != null)
         {
-            LogRecovery("refresh", health.MediaError);
-            await page.CallAsync("Page.reload", new { ignoreCache = false });
+            LogRecovery("refresh", health.MediaError, health.PlayerError);
+            await page.CallAsync("Page.reload", new { ignoreCache = true });
             return true;
         }
         if (state.CanRestore(health))
@@ -167,7 +187,7 @@ internal sealed class BrowserBridge : IDisposable
                   const url = new URL(location.href);
                   const id = url.searchParams.get('v') || (/^\/shorts\/([^/?]+)/.exec(url.pathname)?.[1]) || '';
                   const v = document.querySelector('video');
-                  if (!v || id !== saved.videoId || v.readyState < 1 || document.querySelector('#movie_player')?.classList.contains('ad-showing')) return false;
+                  if (!v || id !== saved.videoId || v.readyState < 3 || document.querySelector('#movie_player')?.classList.contains('ad-showing')) return false;
                   if (!saved.live && Number.isFinite(v.duration) && v.duration > 0)
                     v.currentTime = Math.min(saved.time, Math.max(0, v.duration - 0.25));
                   if (saved.paused) v.pause(); else await v.play();
@@ -179,14 +199,14 @@ internal sealed class BrowserBridge : IDisposable
         return false;
     }
 
-    private static void LogRecovery(string action, int mediaError)
+    private static void LogRecovery(string action, int mediaError, string playerError = "")
     {
         try
         {
             Directory.CreateDirectory(DataDirectory);
             var path = Path.Combine(DataDirectory, "recovery.log");
             if (File.Exists(path) && new FileInfo(path).Length > 65536) File.WriteAllText(path, "");
-            File.AppendAllText(path, JsonSerializer.Serialize(new { at = DateTimeOffset.UtcNow, action, mediaError }) + Environment.NewLine);
+            File.AppendAllText(path, JsonSerializer.Serialize(new { at = DateTimeOffset.UtcNow, action, mediaError, playerError }) + Environment.NewLine);
         }
         catch { /* Diagnostics must never interrupt playback. */ }
     }
@@ -206,6 +226,6 @@ internal sealed class BrowserBridge : IDisposable
         await page.CallAsync("Page.bringToFront");
     }
 
-    private void Disconnect(bool forgetTarget = true) { page?.Dispose(); page = null; if (forgetTarget) targetId = null; HasVideo = false; }
+    private void Disconnect(bool forgetTarget = true) { page?.Dispose(); page = null; if (forgetTarget) targetId = null; HasVideo = false; playbackError = null; }
     public void Dispose() { Disconnect(); http.Dispose(); }
 }

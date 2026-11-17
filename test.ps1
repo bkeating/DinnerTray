@@ -6,6 +6,8 @@ Push-Location $PSScriptRoot
 try {
     & $sdk run --project tests/RecoveryTests.csproj -c Release
     if ($LASTEXITCODE -ne 0) { throw 'Recovery/physics tests failed.' }
+    & $sdk run --project tests/BrowserBridgeChecks/BrowserBridgeChecks.csproj -c Release
+    if ($LASTEXITCODE -ne 0) { throw 'Browser discovery checks failed.' }
     & $sdk run --project tests/DesktopGameChecks/DesktopGameChecks.csproj -c Release
     if ($LASTEXITCODE -ne 0) { throw 'Desktop game checks failed.' }
     node --test tests/health-script.test.mjs tests/video-frame.test.mjs
