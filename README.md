@@ -44,7 +44,8 @@ Choose **Spawn a sheep** in the tray menu. Woolly walks along exposed window top
 
 - **Drag and drop:** pick up a sheep and release it above a window edge.
 - **Fling:** release while moving to throw it along a gravity-driven arc. Hold still briefly before releasing for a plain drop.
-- Spawn up to 12 sheep. Right-click a perched sheep to try **Sit down**, **Take a nap**, **Jump!**, or **Play faint**. Right-click one to send it home, or dismiss the entire flock from the tray menu.
+- Choose **Spawn a Herd** to add ten adult sheep at once. Nearby adults on the same ledge sometimes mate. Hearts float above the pair, and a small lamb appears beside them when they finish. Lambs stay small, and births pause when the flock has as many lambs as adults.
+- Right-click a perched sheep to try **Sit down**, **Take a nap**, **Jump!**, or **Play faint**. Right-click one to send it home, or dismiss the entire flock from the tray menu.
 - Sheep do not take keyboard focus or add taskbar buttons. Transparent areas let clicks pass through.
 
 Use restored windows to give sheep visible title-bar platforms. Moving, minimizing, or closing a supporting window makes them fall. Quitting DinnerTray sends the flock home; sheep are not restored on startup.

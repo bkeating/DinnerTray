@@ -55,6 +55,7 @@ internal sealed class TrayApp : ApplicationContext
         menu.Items.Add("Open YouTube", null, async (_, _) => await RunActionAsync(() => browser.OpenAsync()));
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Spawn a sheep", null, (_, _) => pets.Spawn());
+        menu.Items.Add("Spawn a Herd", null, (_, _) => pets.SpawnHerd());
         menu.Items.Add("Send all sheep home", null, (_, _) => pets.Clear());
         menu.Items.Add("Slingshot game / Reset blocks", null, (_, _) => pets.StartGame());
         menu.Items.Add("Close slingshot game", null, (_, _) => pets.StopGame());

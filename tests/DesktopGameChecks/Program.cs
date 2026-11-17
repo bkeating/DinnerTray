@@ -7,6 +7,7 @@ internal static class Program
     {
         ApplicationConfiguration.Initialize();
         CheckSheep();
+        CheckHerd();
         RenderFlock();
         foreach(int width in new[]{1280,1920,3440})
         {
@@ -96,6 +97,42 @@ internal static class Program
         Require(new[] { CreaturePose.Walk, CreaturePose.Sit, CreaturePose.Sleep, CreaturePose.Jump }.All(seen.Contains),
                 "Autonomous walk, sit, doze and jump");
         Console.WriteLine("PASS: sheep commands, autonomous behavior, perch loss, hard landing and recovery");
+    }
+
+    static void CheckHerd()
+    {
+        using var pets = new DesktopPets();
+        pets.SpawnHerd();
+        pets.SpawnHerd();
+        Require(pets.Flock.Count == 20, "Each herd adds exactly ten sheep");
+        var area = Screen.FromPoint(Cursor.Position).WorkingArea;
+        Perch[] floor = [new(area.Left, area.Right, area.Bottom)];
+        foreach (var pet in pets.Flock)
+        {
+            pet.Place(pet.Body.X, area.Bottom);
+            pet.Body.Step(.01f, floor, area, 0);
+        }
+        var random = new Random(42);
+        void FindPair()
+        {
+            for (int i = 0; i < 20 && !pets.Flock.Any(p => p.Paired); i++)
+                pets.UpdatePair(41, floor, random);
+            Require(pets.Flock.Count(p => p.Paired) == 2 && pets.Flock.Count(p => p.Mounted) == 1, "One adult mounts a partner");
+        }
+        FindPair();
+        pets.Flock.First(p => p.Paired).Close();
+        pets.UpdatePair(4, floor, random);
+        Require(pets.Flock.All(p => !p.Paired && !p.IsLamb), "Interrupted pair separates without a birth");
+        FindPair();
+        pets.UpdatePair(2, floor, random);
+        Require(pets.Flock.All(p => !p.IsLamb), "Birth waits for the animation");
+        pets.UpdatePair(1, floor, random);
+        var lamb = pets.Flock.Single(p => p.IsLamb);
+        lamb.Body.Step(.05f, floor, area, 0);
+        lamb.Body.Step(.05f, floor, area, 0);
+        Require(lamb.Body.Grounded && !lamb.Available, "Lamb can perch and cannot mate");
+        Require(pets.Flock.All(p => !p.Paired), "Pair separates after one lamb");
+        Console.WriteLine("PASS: herd size, interrupted pairing, completed pairing and lamb");
     }
 
     static void RenderFlock()
