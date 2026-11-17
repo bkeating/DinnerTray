@@ -1,58 +1,6 @@
 using System.Diagnostics;
-using System.Drawing.Drawing2D;
 
 namespace DinnerTray;
-
-internal enum CreaturePose { Walk, Idle, Fall, Held, Land }
-internal interface IDesktopCreature
-{
-    string Name { get; }
-    void Draw(Graphics g, CreaturePose pose, double clock, int direction);
-}
-
-// Original pixel artwork, drawn at 3× scale. Future creatures only implement this renderer.
-internal sealed class WoollySheep : IDesktopCreature
-{
-    public string Name => "Woolly";
-    public void Draw(Graphics g, CreaturePose pose, double clock, int direction)
-    {
-        g.SmoothingMode = SmoothingMode.None;
-        g.ScaleTransform(3, 3);
-        if (direction < 0) { g.TranslateTransform(32, 0); g.ScaleTransform(-1, 1); }
-        int stride = pose == CreaturePose.Walk ? (int)(clock * 9) % 4 : 0;
-        int bob = pose == CreaturePose.Walk && stride % 2 == 1 ? -1 : 0;
-        if (pose == CreaturePose.Land) bob = 2;
-        void Box(Color c, int x, int y, int w, int h) { using var b = new SolidBrush(c); g.FillRectangle(b, x, y, w, h); }
-        var ink = Color.FromArgb(49, 48, 60);
-        var wool = Color.FromArgb(255, 248, 223);
-        var shade = Color.FromArgb(212, 207, 193);
-        int feet = pose is CreaturePose.Held or CreaturePose.Fall ? 1 : 0;
-        // Alternating little hooves, including a dangling pose when carried.
-        foreach (int leg in new[] { 9, 13, 20, 23 })
-        {
-            int swing = pose == CreaturePose.Walk ? (leg % 2 == stride % 2 ? 1 : -1) : 0;
-            Box(ink, leg + swing, 17 + bob, 2, 5 + feet - bob);
-            Box(ink, leg + swing - 1, 21 + feet, 3, 1);
-        }
-        // Stepped cloud silhouette, with warm shadow and individual wool tufts.
-        Box(ink, 6, 8 + bob, 20, 11); Box(ink, 9, 5 + bob, 14, 16);
-        Box(ink, 4, 11 + bob, 24, 5);
-        Box(shade, 7, 9 + bob, 18, 10); Box(shade, 10, 6 + bob, 12, 14);
-        Box(wool, 7, 9 + bob, 17, 7); Box(wool, 10, 6 + bob, 11, 11);
-        Box(wool, 5, 12 + bob, 20, 3); Box(wool, 9, 8 + bob, 14, 9);
-        Box(Color.White, 10, 7 + bob, 4, 2); Box(Color.White, 7, 10 + bob, 3, 2);
-        Box(shade, 11, 16 + bob, 2, 2); Box(shade, 17, 17 + bob, 2, 2);
-        // Face, ears, cream forelock, bright eyes and a pink nose.
-        Box(ink, 23, 9 + bob, 7, 9); Box(ink, 21, 8 + bob, 3, 3);
-        Box(Color.FromArgb(108, 99, 112), 22, 9 + bob, 2, 1);
-        Box(wool, 24, 7 + bob, 4, 3);
-        bool blink = pose == CreaturePose.Idle && clock % 4.5 < .18;
-        Box(Color.White, 27, 11 + bob, 2, blink ? 1 : 3);
-        if (!blink) Box(ink, 28, 12 + bob, 1, 1);
-        Box(Color.FromArgb(224, 151, 151), 28, 16 + bob, 2, 1);
-        Box(wool, 3, 10 + bob, 3, 3);
-    }
-}
 
 internal sealed class DesktopSheep : Form
 {
@@ -65,20 +13,35 @@ internal sealed class DesktopSheep : Form
     public bool GameFlight;
     public bool IsDragging => dragging;
     private static double InputTime => Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
-    public void Place(float x, float y) { Body.Drop(x,y); Location = new Point((int)x-48,(int)y-66); }
-    private double clock, idleUntil, nextDecision = 3, landedUntil;
+    private const int FootX = 60, FootY = 84;
+    internal readonly SheepBehavior Behavior = new(Random.Shared);
+    internal CreaturePose CurrentPose => dragging || Game?.Loaded == this ? CreaturePose.Held : Behavior.Pose(Body);
+    public void Place(float x, float y)
+    {
+        Behavior.Interrupt();
+        Body.Drop(x, y);
+        Location = new Point((int)x - FootX, (int)y - FootY);
+    }
+    private double clock;
     public DesktopSheep(IDesktopCreature creature, Point spawn)
     {
         this.creature = creature;
         Text = creature.Name + " — DinnerTray";
         FormBorderStyle = FormBorderStyle.None; ShowInTaskbar = false; TopMost = true;
-        AutoScaleMode = AutoScaleMode.None; ClientSize = new Size(96, 72);
+        AutoScaleMode = AutoScaleMode.None; ClientSize = new Size(120, 96);
         BackColor = Color.Magenta; TransparencyKey = Color.Magenta;
         DoubleBuffered = true; Cursor = Cursors.Hand;
         StartPosition = FormStartPosition.Manual;
-        Body.Drop(spawn.X, spawn.Y);
-        Location = new Point(spawn.X - 48, spawn.Y - 66);
+        Place(spawn.X, spawn.Y);
         var menu = new ContextMenuStrip();
+        foreach (var (label, pose) in new[] { ("Sit down", CreaturePose.Sit), ("Take a nap", CreaturePose.Sleep),
+                                              ("Jump!", CreaturePose.Jump), ("Play faint", CreaturePose.Faint) })
+            menu.Items.Add(label, null, (_, _) => Behavior.Act(pose, Body));
+        menu.Opening += (_, _) =>
+        {
+            for (int i = 0; i < 4; i++) menu.Items[i].Enabled = Body.Grounded && !dragging && Game?.Loaded != this;
+        };
+        menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add("Send this sheep home", null, (_, _) => Close());
         ContextMenuStrip = menu;
         FormClosed += (_, _) => menu.Dispose();
@@ -100,31 +63,26 @@ internal sealed class DesktopSheep : Form
             // Recover after monitor removal or taskbar/work-area changes.
             if (Body.Y > area.Bottom || Body.X < area.Left || Body.X > area.Right)
                 Body.Drop(Math.Clamp(Body.X, area.Left + 48, area.Right - 48), Math.Min(Body.Y, area.Bottom));
-            if (Body.Grounded && clock >= nextDecision)
-            {
-                idleUntil = clock + Random.Shared.NextDouble() * 2 + .7;
-                nextDecision = idleUntil + Random.Shared.Next(4, 10);
-                if (Random.Shared.Next(3) == 0) Body.Direction *= -1;
-            }
+            Behavior.BeforeStep(dt, Body);
             var activeSurfaces = GameFlight && Game is { IsDisposed: false } ? new[] {new Perch(Game.World.Area.Left,Game.World.Area.Right,Game.World.Area.Bottom)} : surfaces;
-            Body.Step(dt, activeSurfaces, GameFlight && Game is { IsDisposed: false } ? Game.World.Area : area, clock < idleUntil ? 0 : 34);
+            Body.Step(dt, activeSurfaces, GameFlight && Game is { IsDisposed: false } ? Game.World.Area : area, Behavior.WalkSpeed);
             if (Game is { IsDisposed: false } && !Body.Grounded) Game.World.Hit(Body);
             if (Body.Grounded) GameFlight = false;
-            if (Body.Landed) landedUntil = clock + .16;
-            Location = new Point((int)Body.X - 48, (int)Body.Y - 66);
+            Behavior.AfterStep(Body);
+            Location = new Point((int)Body.X - FootX, (int)Body.Y - FootY);
         }
         Invalidate();
     }
     protected override void OnPaint(PaintEventArgs e)
     {
         base.OnPaint(e);
-        var pose = dragging ? CreaturePose.Held : !Body.Grounded ? CreaturePose.Fall : clock < landedUntil ? CreaturePose.Land : clock < idleUntil ? CreaturePose.Idle : CreaturePose.Walk;
-        creature.Draw(e.Graphics, pose, clock, Body.Direction);
+        creature.Draw(e.Graphics, CurrentPose, clock, Body.Direction);
     }
     protected override void OnMouseDown(MouseEventArgs e)
     {
         base.OnMouseDown(e);
         if (e.Button != MouseButtons.Left) return;
+        Behavior.Interrupt();
         dragging = true; grab = e.Location; Capture = true;
         GameFlight = false; gesture.Clear(); gesture.Add(Cursor.Position, InputTime);
         Body.Launch(0,0);
@@ -135,9 +93,9 @@ internal sealed class DesktopSheep : Form
         if (!dragging) return;
         var cursor = Cursor.Position;
         gesture.Add(cursor,InputTime);
-        if (Game?.Loaded == this) { Game.Pull(this,new PointF(cursor.X-grab.X+48,cursor.Y-grab.Y+40)); return; }
+        if (Game?.Loaded == this) { Game.Pull(this,new PointF(cursor.X-grab.X+FootX,cursor.Y-grab.Y+FootY-26)); return; }
         Location = new Point(cursor.X - grab.X, cursor.Y - grab.Y);
-        Body.Drop(Left + 48, Top + 66);
+        Body.Drop(Left + FootX, Top + FootY);
     }
     protected override void OnMouseUp(MouseEventArgs e)
     {
@@ -173,11 +131,13 @@ internal sealed class DesktopPets : IDisposable
     }
     public void StopGame() => game?.Close();
     public DesktopPets() { timer.Tick += (_, _) => Tick(); }
+    private int nextStyle;
     public void Spawn()
     {
         if (sheep.Count >= 12) return;
         var screen = Screen.FromPoint(Cursor.Position).WorkingArea;
-        var pet = new DesktopSheep(new WoollySheep(), new Point(Math.Clamp(Cursor.Position.X, screen.Left + 60, screen.Right - 60), screen.Top + 90));
+        var pet = new DesktopSheep(new WoollySheep(nextStyle), new Point(Math.Clamp(Cursor.Position.X, screen.Left + 60, screen.Right - 60), screen.Top + 90));
+        nextStyle = (nextStyle + 1) % WoollySheep.Names.Length;
         pet.Game=game;
         sheep.Add(pet); pet.FormClosed += (_, _) => { sheep.Remove(pet); if (sheep.Count == 0 && game==null) timer.Stop(); };
         pet.Show(); nextScan = 0; lastTick = clock.Elapsed.TotalSeconds; timer.Start();

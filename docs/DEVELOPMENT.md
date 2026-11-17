@@ -6,7 +6,8 @@
 - `BrowserBridge.cs`, `CdpClient.cs`: dedicated browser connection, tab selection, frames, and controls.
 - `VideoFrame.js`: chooses a video and draws a 64 × 64 frame; reports unavailable pixels.
 - `PlaybackHealth.js`, `PlaybackRecovery.cs`: YouTube health detection and conservative retry decisions.
-- `DesktopSheep.cs`: original Woolly renderer, transparent pet window, drag input, and pet manager.
+- `SheepBehavior.cs`: perch decisions, landing reactions, and sprite rendering. Rebuild the embedded `assets/sheep.png` with `python scripts/draw-sheep.py` (Pillow).
+- `DesktopSheep.cs`: transparent pet window, drag input, and pet manager.
 - `DesktopSurfaces.cs`: native window enumeration and exposed platform segments.
 - `DesktopPhysics.cs`, `ThrowGesture.cs`: gravity, platforms, and recent pointer velocity.
 - `SlingGame.cs`, `SmashPhysics.cs`: game overlay, slingshot input, blocks, impulses, and debris.

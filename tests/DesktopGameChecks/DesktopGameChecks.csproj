@@ -4,6 +4,8 @@
     <UseWindowsForms>true</UseWindowsForms><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../SheepBehavior.cs" />
+    <EmbeddedResource Include="../../assets/sheep.png" LogicalName="DinnerTray.Sheep.png" />
     <Compile Include="../../DesktopPhysics.cs" />
     <Compile Include="../../DesktopSheep.cs" />
     <Compile Include="../../DesktopSurfaces.cs" />

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.0 — 2026-11-17
+
+- Woolly has four new flockmates. Each has an original pixel-art fleece and silhouette, from Luna’s nightcap to Bramble’s curled horns.
+- Sheep pause, sit, drift off to sleep, and hop along their perches. A disappearing window wakes even a sleeping sheep into a wide-eyed fall with dangling hooves. Hard landings can send them briefly belly-up.
+- Right-click a perched sheep to make it sit, nap, jump, or play faint.
+
 ## 1.2.1 — 2026-11-17
 
 - Keep active tray capture running while other browser tabs are being discovered.

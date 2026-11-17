@@ -5,12 +5,13 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>1.2.1</Version>
+    <Version>1.3.0</Version>
     <Company>The American Spreadsheet Company</Company>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>assets/dinnertray.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="assets/sheep.png" LogicalName="DinnerTray.Sheep.png" />
     <EmbeddedResource Include="assets/dinnertray.png" LogicalName="DinnerTray.Logo.png" />
     <EmbeddedResource Include="PlaybackHealth.js" />
     <EmbeddedResource Include="VideoFrame.js" />

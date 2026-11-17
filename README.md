@@ -38,11 +38,13 @@ DinnerTray supports ordinary HTML video elements on HTTP/HTTPS pages in **its ow
 
 ## Meet Woolly
 
-Choose **Spawn a sheep** in the tray menu. Woolly walks along exposed window tops, blinks, and tumbles down to another window or the taskbar.
+Choose **Spawn a sheep** in the tray menu. Woolly walks along exposed window tops, pauses to sit or nap, and sometimes hops. Spawn again to meet Clover, Luna, Fern, and Bramble. When a ledge disappears, their eyes go wide and their hooves dangle. After a big drop they may briefly play dead, then get back up.
+
+![Five flockmates walking, sitting, sleeping, jumping, dangling, falling, landing, and fainting](docs/assets/flock.png)
 
 - **Drag and drop:** pick up a sheep and release it above a window edge.
 - **Fling:** release while moving to throw it along a gravity-driven arc. Hold still briefly before releasing for a plain drop.
-- Spawn up to 12 sheep. Right-click one to send it home, or dismiss the entire flock from the tray menu.
+- Spawn up to 12 sheep. Right-click a perched sheep to try **Sit down**, **Take a nap**, **Jump!**, or **Play faint**. Right-click one to send it home, or dismiss the entire flock from the tray menu.
 - Sheep do not take keyboard focus or add taskbar buttons. Transparent areas let clicks pass through.
 
 Use restored windows to give sheep visible title-bar platforms. Moving, minimizing, or closing a supporting window makes them fall. Quitting DinnerTray sends the flock home; sheep are not restored on startup.

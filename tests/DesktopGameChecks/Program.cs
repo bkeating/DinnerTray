@@ -6,6 +6,8 @@ internal static class Program
     [STAThread] static void Main()
     {
         ApplicationConfiguration.Initialize();
+        CheckSheep();
+        RenderFlock();
         foreach(int width in new[]{1280,1920,3440})
         {
             using var game=new SlingGame(new Rectangle(0,0,width,1000));
@@ -46,6 +48,81 @@ internal static class Program
         using(var g=Graphics.FromImage(bitmap)) {g.TranslateTransform(woolly.Left,woolly.Top);new WoollySheep().Draw(g,CreaturePose.Held,1,1);}
         Directory.CreateDirectory("test-results");bitmap.Save("test-results/slingshot-preview.png",ImageFormat.Png);
         Console.WriteLine("PASS: rendered game preview");
+    }
+    static void CheckSheep()
+    {
+        var area = Screen.PrimaryScreen!.WorkingArea;
+        int top = area.Top + 120, x = area.Left + area.Width / 2;
+        Perch[] ledge = [new(x - 120, x + 120, top)];
+        Perch[] floor = [new(area.Left, area.Right, area.Bottom)];
+        using var pet = new DesktopSheep(new WoollySheep(), new Point(x, top));
+        void Advance(int ticks, Perch[] surfaces)
+        {
+            for (int i = 0; i < ticks; i++) pet.Animate(1f / 240, surfaces);
+        }
+        Advance(1, ledge);
+        foreach (var (label, pose) in new[] { ("Sit down", CreaturePose.Sit), ("Play faint", CreaturePose.Faint),
+                                              ("Take a nap", CreaturePose.Sleep), ("Jump!", CreaturePose.Jump) })
+        {
+            pet.ContextMenuStrip!.Items.Cast<ToolStripItem>().Single(item => item.Text == label).PerformClick();
+            Require(pet.CurrentPose == pose, label);
+            Advance(12, ledge);
+            if (pose == CreaturePose.Jump) Require(pet.Body.Y < top - 5, "Jump rises above perch");
+            else Require(pet.Body.X == x && pet.Body.Y == top, "Resting sheep stays perched");
+        }
+        Advance(140, ledge);
+        Require(pet.Body.Grounded, "Hop lands on ledge");
+        pet.Behavior.Act(CreaturePose.Sleep, pet.Body);
+        Advance(1, floor);
+        Require(pet.CurrentPose == CreaturePose.Fall, "Removing a window wakes sleeping sheep into fall");
+        for (int i = 0; i < 2000 && !pet.Body.Grounded; i++) Advance(1, floor);
+        Require(pet.CurrentPose == CreaturePose.Land, "Fall ends in landing squash");
+        Advance(60, floor);
+        Require(pet.CurrentPose == CreaturePose.Faint, "Hard landing causes faint");
+        Advance(400, floor);
+        Require(pet.CurrentPose == CreaturePose.Walk, "Sheep recovers from faint");
+
+        var body = new DesktopPhysics();
+        var brain = new SheepBehavior(new Random(37));
+        var seen = new HashSet<CreaturePose>();
+        body.Drop(x, area.Bottom);
+        for (int i = 0; i < 240 * 250; i++)
+        {
+            brain.BeforeStep(1f / 240, body);
+            body.Step(1f / 240, floor, area, brain.WalkSpeed);
+            brain.AfterStep(body);
+            seen.Add(brain.Pose(body));
+        }
+        Require(new[] { CreaturePose.Walk, CreaturePose.Sit, CreaturePose.Sleep, CreaturePose.Jump }.All(seen.Contains),
+                "Autonomous walk, sit, doze and jump");
+        Console.WriteLine("PASS: sheep commands, autonomous behavior, perch loss, hard landing and recovery");
+    }
+
+    static void RenderFlock()
+    {
+        CreaturePose[] poses = [CreaturePose.Walk, CreaturePose.Sit, CreaturePose.Sleep, CreaturePose.Jump,
+                                CreaturePose.Held, CreaturePose.Fall, CreaturePose.Land, CreaturePose.Faint];
+        using var sheet = new Bitmap(90 + 120 * poses.Length, 38 + 96 * WoollySheep.Names.Length);
+        using var g = Graphics.FromImage(sheet);
+        g.Clear(Color.FromArgb(39, 44, 57));
+        using var font = new Font("Segoe UI", 10, FontStyle.Bold);
+        for (int i = 0; i < poses.Length; i++)
+            g.DrawString(poses[i].ToString(), font, Brushes.Wheat, 125 + i * 120, 14);
+        for (int row = 0; row < WoollySheep.Names.Length; row++)
+        {
+            var woolly = new WoollySheep(row);
+            g.DrawString(woolly.Name, font, Brushes.WhiteSmoke, 14, 76 + row * 96);
+            for (int col = 0; col < poses.Length; col++)
+            {
+                var state = g.Save();
+                g.TranslateTransform(90 + 120 * col, 38 + row * 96);
+                woolly.Draw(g, poses[col], .2, 1);
+                g.Restore(state);
+            }
+        }
+        Directory.CreateDirectory("test-results");
+        sheet.Save("test-results/flock.png", ImageFormat.Png);
+        Console.WriteLine("PASS: rendered five styles in eight poses");
     }
     static void Require(bool ok,string message){if(!ok)throw new Exception(message);}
 }
